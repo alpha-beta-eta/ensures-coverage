@@ -1,0 +1,16 @@
+[package]
+name = "item-index"
+version = "0.1.0"
+edition = "2021"
+
+# verus_syn must parse the syntax of the Verus that the checked project uses.
+# The pinned version is the one vostd 36e90fe19 vendors in
+# tools/verus/dependencies/syn.  To build against a project's own copy
+# instead (offline, or another Verus version):
+#   cargo build --release --config 'patch.crates-io.verus_syn.path="<$SRC>/tools/verus/dependencies/syn"'
+[dependencies]
+verus_syn = { version = "=0.0.0-2026-09-06-0133", features = ["full", "parsing", "printing"] }
+proc-macro2 = { version = "1", features = ["span-locations"] }
+quote = "1"
+
+[workspace]
