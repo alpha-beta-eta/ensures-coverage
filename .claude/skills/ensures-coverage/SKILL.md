@@ -5,7 +5,7 @@ description: 用ensures-coverage检查Verus项目 (如vostd) 中exec/proof函数
 
 # 使用ensures-coverage审阅Verus规格
 
-工具目录 (下文记为`$EC`): 本机是`D:/ensures-coverage-3`; 在别的机器上是本skill所在仓库的根目录 (`.claude/skills/ensures-coverage/`的上三层), 找不到就问用户. 被检查的项目检出记为`$SRC`.
+工具目录 (下文记为`$EC`): 本skill所在仓库的根目录, 即`.claude/skills/ensures-coverage/`的上三层, 其中应有`main.rkt`. skill被复制到了别处 (如`~/.claude/skills/`) 时上三层不是工具目录, 这时问用户. 被检查的项目检出记为`$SRC`.
 
 第一次在会话中使用时, 先读`$EC/README.md` (怎样运行, 怎样读结果, 警告的含义); 对某条规则的确切含义有疑问时查`$EC/design.md` (设计结论, 注意, 经验). 本skill只讲流程和判断, 不重复它们.
 

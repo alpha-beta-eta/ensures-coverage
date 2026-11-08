@@ -19,7 +19,7 @@
 | [contrib/pr-functions.rkt](contrib/pr-functions.rkt) | 审PR时的辅助脚本 (不属于工具本身): 列出PR涉及的函数 |
 | [.claude/skills/ensures-coverage/](.claude/skills/ensures-coverage/SKILL.md) | 给Claude Code的使用skill: 核对版本, 运行, 审阅报告, 汇报的流程 |
 
-在本目录中运行Claude Code时, skill自动可用. 要在别的项目 (如vostd检出) 中使用, 把这个目录复制到`~/.claude/skills/ensures-coverage/`, 并在其中把"工具目录"改成本机的路径.
+在本目录中运行Claude Code时, skill自动可用. 要在别的项目 (如vostd检出) 中使用, 把这个目录复制到`~/.claude/skills/ensures-coverage/`; 这时skill找不到工具目录, 使用时会询问本工具在本机的路径.
 
 ## 准备
 

@@ -6,8 +6,8 @@
 ;; inside atoms are remapped, via a readtable, to behave like an ordinary
 ;; symbol constituent.  Strings, parentheses, numbers and symbols are left
 ;; to `read`.
-(require racket/list racket/string racket/match racket/fasl)
-(provide load-vir cache-vir unwrap field walk span-file+line)
+(require racket/string racket/match racket/fasl)
+(provide load-vir cache-vir unwrap field span-file+line)
 
 ;; Characters made to behave like the letter `a` (i.e. plain symbol chars).
 ;; Extend this list if a real dump contains other reader-special characters.
@@ -54,12 +54,6 @@
   (and (list? n)
        (let ([m (memq key n)])
          (and m (pair? (cdr m)) (cadr m)))))
-
-;; walk : any -> (listof list) — every list node, preorder.
-(define (walk node)
-  (if (pair? node)
-      (cons node (append-map walk (filter pair? node)))
-      '()))
 
 ;; span-file+line : VIR span string -> (cons file line) or #f
 ;; "ostd\\src\\mm\\io.rs:1576:5: 1597:61 (#0)" -> ("ostd/src/mm/io.rs" . 1576).

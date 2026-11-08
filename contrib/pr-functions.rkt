@@ -4,7 +4,7 @@
 ;; Writes the results of only the functions a PR's changes involve, each
 ;; `fn` form followed by a comment naming why it is there; `racket main.rkt
 ;; report <out.results> <out.md> all` expands it.  The choice of functions is
-;; the reviewer's, made outside the tool (design.md, 结论20):
+;; the reviewer's, made outside the tool (design.md, 结论19):
 ;;   changed   the function's whole item (attributes, spec, signature, body)
 ;;             in the PR head overlaps a hunk of `git diff MERGE-BASE...HEAD`
 ;;   new       the function is in the head results but not in the base
