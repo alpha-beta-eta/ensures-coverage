@@ -15,7 +15,7 @@ description: 用ensures-coverage检查Verus项目 (如vostd) 中exec/proof函数
 
 VIR的格式没有版本号, 完全跟着Verus走, 而且改得很频繁. 格式对不上时, 工具不会出错, 只会给出错误的结果. 所以**每次使用前**都要核对.
 
-vostd总是跟着最新的Verus验证, 所以主要的风险不是Verus太旧, 而是**vostd升级Verus之后, 新版本落在已验证的范围之外**: 工具读的部分平均一两个月就会变一次. 每次看到项目的Verus比README表中最新的一行还新, 就按下面第2步核对; 核对通过后, 提醒用户把新版本加进README的表. 审PR时merge-base可能比head旧, 需要更早的Verus, 这时head和merge-base要分别核对.
+vostd总是跟着最新的Verus验证, 所以主要的风险不是Verus太旧, 而是**vostd升级Verus之后, 新版本落在已验证的范围之外**: 工具读的部分平均一两个月就会变一次. 每次看到项目的Verus比README表中最新的一行还新, 就按下面第2, 3步核对; 核对通过后, 提醒用户把新版本加进README的表. 审PR时merge-base可能比head旧, 需要更早的Verus, 这时head和merge-base要分别核对.
 
 1. 查项目所用的Verus:
 
@@ -24,18 +24,19 @@ vostd总是跟着最新的Verus验证, 所以主要的风险不是Verus太旧, �
    git -C $SRC/tools/verus log -1 --format='%H %cd' --date=short
    ```
 
-2. 与`$EC/README.md`"Verus版本"一节的表比较.
+2. 用项目的Verus跑fixture测试 (`$EC/README.md`"测试"一节): `VERUS=... VERUS_Z3_PATH=... $EC/tests/run.sh`. 失败时**停下来告诉用户**, 附上diff, 不要用这份结果下结论; 修工具时以让测试恢复通过为目标, 不要随手`--update`.
+3. 与`$EC/README.md`"Verus版本"一节的表比较.
    - 在表中: 可以用.
-   - 不在表中: 按README中的命令, 对表中最近的提交`git diff` `source/vir/src/ast.rs`, `printer.rs`和`builtin_macros/src/syntax.rs`, 逐项对照README列出的"本工具依赖的VIR名字". 有变化就**停下来告诉用户**, 说明变了什么, 不要用这份结果下结论. 没有变化时可以继续, 但在汇报中注明"该Verus版本未经验证, 已对照ast.rs的diff".
+   - 不在表中: fixture测试通过是前提. 再按README中的命令, 对表中最近的提交`git diff` `source/vir/src/ast.rs`, `printer.rs`, `def.rs`和`builtin_macros/src/syntax.rs`, 逐项对照README列出的"本工具依赖的VIR名字" (fixture只覆盖它写到的写法). 有变化就**停下来告诉用户**, 说明变了什么, 不要用这份结果下结论. 没有变化时可以继续, 但在汇报中注明"该Verus版本未经验证, 已对照ast.rs的diff".
    - 两个提交不在同一个仓库里时 (例如一个来自asterinas/verus的另一个检出), 建一个临时的bare仓库, 把两边的提交都`git fetch`进去再diff, 不要改动现有的仓库.
    - 这一步不能省: 用2026-09-03的Verus导出的VIR, 返回值字段叫`:ret`而不是`:outer_ret`; 旧版工具照常结束, 不报警告, 只是一条返回值的报告也没有 (现在会警告, 但别的变化未必都能被警告抓住).
    - 有条件时 (表中某个提交的结果还在), 用新Verus对那个提交重跑, 与旧结果比较. 这是最可靠的核对.
-3. 跑`check`时看stderr:
+4. 跑`check`时看stderr:
    - `the VIR format may have changed`: 结果不可信, 停下来告诉用户.
    - 源文件是绝对路径, 或在`$SRC`下找不到: 导出目录或`$SRC`给错了, 改正后重跑.
    - `item-index: ... parse error`: 这些文件中的函数没有源码行, 按行选函数时会漏掉. 按README改用项目自带的`verus_syn`重新编译`item-index`.
    - stdout上"N of them not found by the source parser": vostd的`ostd`约200个是正常的 (宏和`derive`生成的). 远多于此时, 源码或解析器与VIR不符.
-4. 核对源码: `$SRC`必须与导出VIR时的提交一致. 用`git -C $SRC status --short`看有没有未提交的改动 (以前审PR时就因为工作区里留着改动, 有13个函数对不上). 有改动时用`git archive <commit> ostd verified_libs | tar -x -C <dir>`取一份干净的源码作为`$SRC`.
+5. 核对源码: `$SRC`必须与导出VIR时的提交一致. 用`git -C $SRC status --short`看有没有未提交的改动 (以前审PR时就因为工作区里留着改动, 有13个函数对不上). 有改动时用`git archive <commit> ostd verified_libs | tar -x -C <dir>`取一份干净的源码作为`$SRC`.
 
 ## 2. 先查全部函数, 再选出要审阅的
 
@@ -44,7 +45,7 @@ vostd总是跟着最新的Verus验证, 所以主要的风险不是Verus太旧, �
 - 选哪些函数是审阅者的决定, 不由工具推断. 常见的选法:
   - 一个模块或文件: `(module "^ostd::mm::frame")`, `(file "^ostd/src/mm/tlb[.]rs$")`.
   - 用户指定的函数: 逐个写成`(name "...")`放进文件, 传`@文件`.
-  - 一个PR: 在head和merge-base上各跑一遍完整的`check`, 用`$EC/contrib/pr-functions.rkt`选出与diff有交集的函数和新增的函数. 读一遍PR的diff, 确认清单合理; 清单外但PR改了其规格依赖的函数 (如被调用的下层函数), 自己补进来.
+  - 一个PR: 在head上跑一遍完整的`check`, 用`$EC/contrib/pr-functions.rkt`选出与diff有交集的函数, 以及声明被改动的trait方法实现 (用法见README"审PR"; 再给出merge-base的结果时也列出新增的函数). 读一遍PR的diff, 确认清单合理; 清单外但PR改了其规格依赖的函数 (如被调用的下层函数), 自己补进来.
 - 在汇报中写明用了哪个选择器, 选中了多少函数.
 - 在Windows上用Git Bash运行, 或者把选择器写进文件; PowerShell会弄乱选择器中的双引号.
 

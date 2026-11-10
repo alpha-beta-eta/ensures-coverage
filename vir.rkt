@@ -7,7 +7,7 @@
 ;; symbol constituent.  Strings, parentheses, numbers and symbols are left
 ;; to `read`.
 (require racket/string racket/match racket/fasl)
-(provide load-vir cache-vir unwrap field span-file+line)
+(provide load-vir cache-vir unwrap field span-file+line path->text)
 
 ;; Characters made to behave like the letter `a` (i.e. plain symbol chars).
 ;; Extend this list if a real dump contains other reader-special characters.
@@ -54,6 +54,23 @@
   (and (list? n)
        (let ([m (memq key n)])
          (and m (pair? (cdr m)) (cadr m)))))
+
+;; path->text : VIR path (symbol or string) -> string
+;; Since Verus 0.2026.11.08 (ast.rs `Segment`, verus 942817445) each segment
+;; of a VIR path carries its Rust namespace: `t%` for the type namespace
+;; (modules, types, traits), `tdis%N%` and `vdis%N%` for disambiguated
+;; names, and a whole `foreign_mod%N` segment for an `extern` block:
+;; `ostd::t%mm::t%frame::impl&%3::into_raw`.  Results, reports and selectors
+;; use the Rust path as before (`ostd::mm::frame::impl&%3::into_raw`), so
+;; these are dropped; on older VIR, which has none of them, this is the
+;; identity.  Use it for names only: dropping the disambiguators can make
+;; two paths equal, so lookups keep the raw path.
+(define (path->text p)
+  (string-join
+   (for/list ([seg (string-split (if (symbol? p) (symbol->string p) p) "::")]
+              #:unless (regexp-match? #rx"^foreign_mod%[0-9]+$" seg))
+     (regexp-replace #rx"^(?:t%|[tv]dis%[0-9]+%)" seg ""))
+   "::"))
 
 ;; span-file+line : VIR span string -> (cons file line) or #f
 ;; "ostd\\src\\mm\\io.rs:1576:5: 1597:61 (#0)" -> ("ostd/src/mm/io.rs" . 1576).

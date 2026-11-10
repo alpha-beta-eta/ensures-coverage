@@ -19,11 +19,16 @@
 
 ;; ================================================================ VIR helpers
 
+;; The raw VIR path, with namespace prefixes (vir.rkt, path->text): only for
+;; looking functions up.  Results and reports use display-name.
 (define (fn-path f) (symbol->string (field (field f 'name) 'path)))
 
 (define verified-prefix "_VERUS_VERIFIED_")
 
-(define (display-name f) (string-replace (fn-path f) verified-prefix ""))
+(define (display-name f) (string-replace (path->text (fn-path f)) verified-prefix ""))
+
+;; The last segment of a VIR path, without its namespace prefix: "Frame".
+(define (short-name p) (short-path (path->text p)))
 
 (define (fn-kind f)
   (match (field f 'kind) [(list 'FunctionKind k _ ...) k] [k k]))
@@ -37,7 +42,7 @@
 
 (define (public? f) (eq? (field (field f 'visibility) 'restricted_to) 'None))
 
-(define (owning-module f) (symbol->string (field f 'owning_module)))
+(define (owning-module f) (path->text (field f 'owning_module)))
 
 ;; :ensure is (tuple <ensures> <default_ensures>) (结论15).
 (define (ensures f)
@@ -48,6 +53,10 @@
 (define (returns? f) (not (eq? (field f 'returns) 'None)))
 
 (define (var-name v) (match v [(list 'VarIdent (? string? s) _ ...) s] [_ #f]))
+
+;; The name VIR gives a return value that the spec leaves unnamed (结论8):
+;; `%return` until Verus 0.2026.11.08, `return%` since (verus 942817445).
+(define unnamed-return-names '("%return" "return%"))
 
 ;; '() when the field is missing, so that vir-format-warnings can report it
 (define (params f) (let ([ps (field f 'params)]) (if (list? ps) (map unwrap ps) '())))
@@ -94,13 +103,13 @@
     [(list 'Typ 'Decorate (list 'TypDecoration d) _ inner) (list d (typ->sexp inner))]
     [(list 'Typ 'Datatype (list 'Dt 'Tuple 0) _ ...) '(tuple)]
     [(list 'Typ 'Datatype (list 'Dt 'Tuple _) ts _ ...) (cons 'tuple (map typ->sexp ts))]
-    [(list 'Typ 'Datatype (list 'Dt 'Path p) ts _ ...) (dt (sym (short-path p)) ts)]
+    [(list 'Typ 'Datatype (list 'Dt 'Path p) ts _ ...) (dt (sym (short-name p)) ts)]
     ;; <Self as Trait<Args>>::Name ; trait_typ_args = (Self Args ...)
     [(list 'Typ 'Projection _ ...)
      (define targs (or (field (cdr t) 'trait_typ_args) '()))
      (list 'as
            (if (pair? targs) (typ->sexp (car targs)) '?)
-           (dt (sym (short-path (or (field (cdr t) 'trait_path) "?"))) (if (pair? targs) (cdr targs) '()))
+           (dt (sym (short-name (or (field (cdr t) 'trait_path) "?"))) (if (pair? targs) (cdr targs) '()))
            (let ([n (field (cdr t) 'name)]) (if n (sym n) '?)))]
     [(list 'Typ 'Primitive (list 'Primitive 'Slice) (list t0) _ ...) (list 'slice (typ->sexp t0))]
     [(list 'Typ 'Primitive (list 'Primitive 'StrSlice) _ ...) 'str]
@@ -126,17 +135,19 @@
              ;; `#[verus_spec]` packs (exec return, ghost returns) into a tuple
              [(list 'Typ 'Datatype (list 'Dt 'Tuple _) (cons a _) _ ...)
               (loop (let-values ([(a _) (peel-typ a)]) a))]
-             [(list 'Typ 'Datatype (list 'Dt 'Path (or 'core::result::Result 'core::option::Option)) (cons a _) _ ...)
+             [(list 'Typ 'Datatype (list 'Dt 'Path
+                                         (? (lambda (p) (member (path->text p) '("core::result::Result" "core::option::Option")))))
+                    (cons a _) _ ...)
               (typ-dt-path a)]
              [_ (typ-dt-path t)]))))
   (cond
     [(eq? (fn-kind f) 'TraitMethodImpl)
      (define self (match (kind-field f 'trait_typ_args)
                     [(cons t _) (typ->text (typ->sexp t))] [_ "?"]))
-     (format "<~a as ~a>::~a" self (short-path (kind-field f 'trait_path)) method)]
+     (format "<~a as ~a>::~a" self (short-name (kind-field f 'trait_path)) method)]
     [(regexp-match? #rx"::impl&%[^:]*::" path)
      (define ty (or (self-type) (ret-self-type)))
-     (if ty (format "~a::~a" (short-path ty) method) path)]
+     (if ty (format "~a::~a" (short-name ty) method) path)]
     [else path]))
 
 ;; ================================================================ selection
@@ -164,7 +175,7 @@
       (display-name f)))
   (filter (lambda (f)
             (or (string-contains? (fn-path f) verified-prefix)
-                (not (set-member? twins (fn-path f)))))
+                (not (set-member? twins (display-name f)))))
           in-scope))
 
 ;; ================================================================ outputs
@@ -292,7 +303,7 @@
   (define post
     (append (if (or (pair? (ensures f)) (returns? f)) '(own) '())
             (if (and decl (or (pair? (ensures decl)) (returns? decl))) '(decl) '())))
-  (define (inv-of t) (let ([p (type-inv-of t)]) (and p (symbol->string p))))
+  (define (inv-of t) (let ([p (type-inv-of t)]) (and p (path->text p))))
   ;; return values (结论8); `returns` mentions only the exec return
   (define (ret-mentioned? m rc)
     (match rc
@@ -307,8 +318,8 @@
         (if i
             (for/or ([b (append own-bindings decl-bindings def-bindings)])
               (and (= (car b) i) (var-name (cadr b))))
-            ;; an unnamed return is `%return` in VIR
-            (and rv (let ([n (var-name rv)]) (and n (not (regexp-match? #rx"^%" n)) n)))))
+            ;; an unnamed return has no name for the report
+            (and rv (let ([n (var-name rv)]) (and n (not (member n unnamed-return-names)) n)))))
       (make-finding (if i 'return-component 'return) name i (typ->sexp t) ghost?
                     (inv-of t) (ret-mentioned? def rc))))
   ;; `&mut` parameters (结论7, 9)
@@ -360,6 +371,19 @@
       (if (and (ormap mut-ensured? fns) (not (ormap final-in? fns)))
           (list (missing "no ensures contains `MutRefFuture` (final(...), 结论9), although some functions have `&mut` parameters and ensures"))
           '())
+      (if (none-has? (filter ret-param fns)
+                     (lambda (f) (member (var-name (ret-var f)) unnamed-return-names)))
+          (list (missing (format "no return value is named ~a (an unnamed return, 结论8)"
+                                 (string-join unnamed-return-names " or "))))
+          '())
+      ;; path segments still carrying a namespace mark after path->text
+      (let ([odd (for*/first ([f fns]
+                              [seg (string-split (owning-module f) "::")]
+                              #:when (regexp-match? #rx"%" seg))
+                   seg)])
+        (if odd
+            (list (missing (format "a module path has the unknown segment `~a` (vir.rkt, path->text)" odd)))
+            '()))
       (if (none-has? impls (lambda (f) (kind-field f 'inherit_body_from)))
           (list (missing "no TraitMethodImpl kind has `:inherit_body_from` (结论3)"))
           '())
@@ -424,7 +448,7 @@
   (define (trait-decl f)
     (define m (symbol->string (field (kind-field f 'method) 'path)))
     (define twin (regexp-replace #rx"::([^:]+)$" m (string-append "::" verified-prefix "\\1")))
-    (values (string-replace m verified-prefix "")
+    (values (string-replace (path->text m) verified-prefix "")
             (or (hash-ref by-path twin #f) (hash-ref by-path m #f))))
   (for/list ([f targets])
     (define impl? (eq? (fn-kind f) 'TraitMethodImpl))
