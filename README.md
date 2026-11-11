@@ -39,12 +39,16 @@ cd item-index
 cargo build --release
 ```
 
-`verus_syn`从crates.io取, 版本固定为vostd `36e90fe19`所用Verus的版本 (`item-index/Cargo.toml`). 离线时, 或者项目所用Verus的语法更新 (解析器报错, 见下文"警告"), 改用项目自带的那份:
+`verus_syn`从crates.io取, `item-index/Cargo.lock`把它固定为vostd `36e90fe19`所用Verus的版本. 离线时, 或者项目所用Verus的语法更新 (解析器报错, 见下文"警告"), 以及在CI中, 改用项目自带的那份:
 
 ```bash
 cd item-index
-cargo build --release --config 'patch.crates-io.verus_syn.path="<$SRC>/tools/verus/dependencies/syn"'
+P='patch.crates-io.verus_syn.path="<$SRC>/tools/verus/dependencies/syn"'
+cargo update -p verus_syn --config "$P"
+cargo build --release --config "$P"
 ```
+
+`cargo update`一步不能省: 没有它, `Cargo.lock`中固定的版本优先, cargo只警告一句"patch ... was not used", 照样用crates.io上的旧版本编译. 它会改动`item-index/Cargo.lock`, 用完后可以`git checkout item-index/Cargo.lock`恢复. (2026-11以前`Cargo.toml`把版本写成`=...`, 项目自带的版本不同时这条patch从不生效.)
 
 `check`默认使用`item-index/target/release/`中的`item-index`. 设了`CARGO_TARGET_DIR`时 (例如Windows上路径过长时设一个短的), 要在`check`的最后一个参数给出它的路径.
 
