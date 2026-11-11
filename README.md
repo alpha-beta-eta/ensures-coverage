@@ -18,6 +18,8 @@
 | [item-index/](item-index/src/main.rs) | Rust程序, 用`verus_syn`解析源文件, 输出每个函数的位置和所在的`impl`/trait |
 | [contrib/pr-functions.rkt](contrib/pr-functions.rkt) | 审PR时的辅助脚本 (不属于工具本身): 列出PR涉及的函数 |
 | [tests/](tests/run.sh) | fixture测试: 一个小的Verus crate, 每条规则对应几个函数, 以及期望的结果 (见"测试") |
+| [ci/ensures-coverage.yml](ci/ensures-coverage.yml) | 给vostd用的GitHub Actions workflow, 复制到vostd的`.github/workflows/` (见"在CI中运行") |
+| [reports/](reports/) | 用本工具审阅vostd后写给维护者的报告 |
 | [.claude/skills/ensures-coverage/](.claude/skills/ensures-coverage/SKILL.md) | 给Claude Code的使用skill: 核对版本, 运行, 审阅报告, 汇报的流程 |
 
 在本目录中运行Claude Code时, skill自动可用. 要在别的项目 (如vostd检出) 中使用, 把这个目录复制到`~/.claude/skills/ensures-coverage/`; 这时skill找不到工具目录, 使用时会询问本工具在本机的路径.
@@ -212,7 +214,7 @@ racket main.rkt report pr.results pr.md all
 
 ### 在CI中运行
 
-计划接入vostd的CI. 方针:
+计划接入vostd的CI. workflow是[ci/ensures-coverage.yml](ci/ensures-coverage.yml), 已在fork `alpha-beta-eta/vostd`上跑通 (2026-11-11): Verus缓存命中时约2分45秒, 对#897, #908, #887的改动分别选中42, 24, 21个函数. 工具取自vostd中的`tools/ensures-coverage` (有的话), 否则按`EC_REPOSITORY`和`EC_REF`检出本仓库. 方针:
 
 - 报告只是提示, 不拦截PR, 也不考虑拦截. 只报告PR涉及的函数 (上一节的选取), 而不是比较前后报告的增减.
 - 先跑fixture测试 (见"测试"); 失败时这一次ensures-coverage直接停止, 不检查也不报告. 停止本身要让人看到: PR上只在job summary中写一行, push到main时让这个job失败, 由维护本工具的人去修.
