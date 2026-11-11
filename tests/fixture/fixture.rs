@@ -96,6 +96,12 @@ pub mod muts {
         ensures final(p).a == old(p).a,
     { }
 
+    /// final(x) only in `returns`, which VIR keeps apart from `ensures`
+    /// (结论9, 12): nothing
+    pub fn final_in_returns(x: &mut u64) -> u64
+        returns *final(x),
+    { *x }
+
     /// two parameters, one mentioned: (mut "y" (&mut u64))
     pub fn one_of_two(x: &mut u64, y: &mut u64)
         ensures *final(x) == *old(x),

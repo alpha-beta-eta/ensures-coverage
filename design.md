@@ -39,7 +39,7 @@
     - `#[verus_spec]`返回元组各分量的名字取自postcondition中的元组模式, 如`(res, owner)`, 按位置对应. 在VIR中, 这是一个以返回变量为初值的`let`; 只认这一种元组模式.
     - `returns e`是`ensures r == e`的简写, 只算exec返回值 (元组的第0个分量) 被提及.
     - 函数体中被返回的表达式不看 (原则1).
-9. `&mut`参数`x`被提及, 当且仅当`x`出现在postcondition的某个`final(...)`之中, 位置不限, 例如`final(x)`, `final(x).inv()`, `final(x)@.len()`, `final(x.f)`, `final(*x)`. `old(x)`和单独出现的`x`都不算: 它们说的是调用前的`x`. 在VIR中`final(...)`是`UnaryOp MutRefFuture`, vstd内部的`mut_ref_future(e)`也是它, 一并算. 除`final(...)`之外, 可能还有别的写法也能描述`x`调用后的值, 本工具一律不认. (由原则3: 只认`final`这一种句法形式.)
+9. `&mut`参数`x`被提及, 当且仅当`x`出现在postcondition (`ensures`和`returns`的表达式; VIR把`returns`放在单独的`:returns`字段中, 不在`:ensure`中) 的某个`final(...)`之中, 位置不限, 例如`final(x)`, `final(x).inv()`, `final(x)@.len()`, `final(x.f)`, `final(*x)`. `old(x)`和单独出现的`x`都不算: 它们说的是调用前的`x`. 在VIR中`final(...)`是`UnaryOp MutRefFuture`, vstd内部的`mut_ref_future(e)`也是它, 一并算. 除`final(...)`之外, 可能还有别的写法也能描述`x`调用后的值, 本工具一律不认. (由原则3: 只认`final`这一种句法形式.)
 10. 只看直接提及. `&mut`参数`x`调用后的状态没有被postcondition直接提及, 就报告为未提及, 而不考虑`x`的借用是否流入返回值, postcondition是否借由返回值间接描述了`x`. (由原则2, 3: 判断间接描述需要分析生命周期, 还要理解关于返回值的规格的含义, 不是简单的分析.)
 11. 变量按VIR的`VarIdent`比较. 它带有rustc给每个绑定的编号, 所以`forall |x|`等绑定的同名变量不会被当成参数`x`. 变量在VIR中有`(Place Local x)`和`(> Var x)`两种写法, 后者出现在Verus自动生成的规格中, 两种都识别.
 

@@ -52,6 +52,13 @@
 
 (define (returns? f) (not (eq? (field f 'returns) 'None)))
 
+;; The clauses scanned for mentions (结论8, 9): the `ensures` and the
+;; `returns` expression.  VIR keeps `returns e` in its own `:returns` field,
+;; not in `:ensure`, and `e` may itself mention `final(x)`, as in
+;; `returns ... == final(self).list_id`.
+(define (post-clauses f)
+  (if (returns? f) (append (ensures f) (list (field f 'returns))) (ensures f)))
+
 (define (var-name v) (match v [(list 'VarIdent (? string? s) _ ...) s] [_ #f]))
 
 ;; The name VIR gives a return value that the spec leaves unnamed (结论8):
@@ -271,7 +278,7 @@
   (define rename (for/hash ([dp (params decl)] [ip (params f)])
                    (values (field dp 'name) (field ip 'name))))
   (define drv (ret-var decl))
-  (define-values (us bs) (scan (ensures decl) drv))
+  (define-values (us bs) (scan (post-clauses decl) drv))
   (values (for/list ([u us])
             (define v (car u))
             (cons (cond [(hash-ref rename v #f)]
@@ -292,7 +299,7 @@
 (define (check-function f decl type-inv-of)
   (define rv (ret-var f))
   ;; regular clauses: own `ensures`, plus the declaration's
-  (define-values (own-uses own-bindings) (scan (ensures f) rv))
+  (define-values (own-uses own-bindings) (scan (post-clauses f) rv))
   (define-values (decl-uses decl-bindings)
     (if decl (renamed-uses decl f) (values '() '())))
   (define reg (mentions-of (append own-uses decl-uses) (append own-bindings decl-bindings) rv))
