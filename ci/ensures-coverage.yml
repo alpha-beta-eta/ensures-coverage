@@ -178,8 +178,8 @@ jobs:
         run: |
           racket "$EC/contrib/pr-functions.rkt" "$OUT/head.results" "$GITHUB_WORKSPACE" "$BASE" "$OUT/pr.results" \
             | tee "$OUT/select.out"
-          racket "$EC/main.rkt" report "$OUT/pr.results" "$OUT/pr.md" all
-          racket "$EC/main.rkt" report "$OUT/head.results" "$OUT/all.md" all
+          racket "$EC/main.rkt" report "$OUT/pr.results" "$OUT/pr.md" all --lang en
+          racket "$EC/main.rkt" report "$OUT/head.results" "$OUT/all.md" all --lang en
 
       - name: Publish summary
         if: always()

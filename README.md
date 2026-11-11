@@ -9,7 +9,9 @@
 | 文件 | 内容 |
 |---|---|
 | [design.md](design.md) | 设计: 问题, 原则, 设计结论, 注意 (局限), 经验 |
-| [main.rkt](main.rkt) | 命令行入口和报告; 报告的全部文字都在其中的"text"一节 |
+| [main.rkt](main.rkt) | 命令行入口 |
+| [report.rkt](report.rkt) | 报告的版式 (分组, 表格, trait实现的合并); 不含任何自然语言文字, 文字的键列在其中的`text-keys` |
+| [text/](text/) | 报告的文字, 每种语言一个文件: [zh.rkt](text/zh.rkt) (默认), [en.rkt](text/en.rkt) |
 | [check.rkt](check.rkt) | 检查本身: 收集输出和提及, 得出结果 (只产出数据) |
 | [results.rkt](results.rkt) | 结果文件的格式: 构造, 读写, 访问, 类型的Rust写法 |
 | [select.rkt](select.rkt) | 选择器: 从结果中挑出要报告的函数 |
@@ -171,8 +173,10 @@ racket main.rkt check <log-dir>/crate.vir ostd.results $SRC
 ### 3. 生成报告
 
 ```bash
-racket main.rkt report ostd.results ostd.md <选择器>
+racket main.rkt report ostd.results ostd.md <选择器> [--lang zh|en]
 ```
+
+报告默认用中文, `--lang en`生成英文报告 (vostd的CI用英文). 报告的版式在`report.rkt`, 文字在`text/<语言>.rkt`, 两者互不依赖: 结果文件与语言无关, 同一份结果可以生成任意语言的报告. 增加一种语言只需在`text/`中加一个文件, 提供`report.rkt`的`text-keys`列出的全部键; `tests/text.rkt` (由`tests/run.sh`调用) 检查每种语言的键是否齐全, 参数个数是否正确, 并用它生成fixture的报告.
 
 同一份结果可以按不同选择器多次生成报告. 选择器的完整语法见design.md结论20, 常用的:
 

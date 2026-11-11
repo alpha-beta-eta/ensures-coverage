@@ -69,4 +69,7 @@ fi
 if ! diff -u <(grep -v '^;;' "$expected") "$tmp/actual.results"; then
     fail "results differ from $expected (lines: - expected, + actual)"
 fi
+
+# 4. every report language covers the same texts and renders this run
+racket "$here/text.rkt" "$tmp/out.results" || fail "a report language is incomplete or fails to render"
 echo "PASS: $(grep -c '^(fn ' "$tmp/actual.results") functions as expected"
