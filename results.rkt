@@ -11,7 +11,7 @@
 ;;           | (mut NAME TYPE FLAG ...)
 ;;   FLAG    = ghost | (inv PATH) | default-only
 (require racket/list racket/match racket/string)
-(provide make-fn fn-with-source make-finding write-results read-results
+(provide make-fn fn-with-source make-finding write-results read-results read-checked
          fn-path fn-mode fn-name fn-inferred? fn-file fn-line fn-start fn-end fn-module
          fn-public? fn-external-body? fn-trait fn-trait-found? fn-has-post? fn-own-post?
          fn-outputs fn-findings
@@ -80,19 +80,30 @@
 ;; ================================================================ files
 
 ;; write-results : out-path (listof vir-path) (listof fn) -> void
-;; The `(vir ...)` form only records which VIR the results came from.
+;; The `(vir ...)` form only records which VIR the results came from;
+;; `(checked N)` is the number of functions `check` covered, which a file
+;; holding only some of them (contrib/pr-functions.rkt) carries over.
 (define (write-results out vir fns)
   (with-output-to-file out #:exists 'replace
     (lambda ()
       (printf ";; ensures-coverage results, design.md 结论22\n")
       (write `(vir ,@vir)) (newline)
+      (write `(checked ,(length fns))) (newline)
       (for ([r fns]) (write r) (newline)))))
+
+(define (read-forms p) (call-with-input-file p (lambda (in) (for/list ([x (in-port read in)]) x))))
 
 ;; read-results : path -> (values (listof fasl-path) (listof fn))
 (define (read-results p)
-  (define forms (call-with-input-file p (lambda (in) (for/list ([x (in-port read in)]) x))))
+  (define forms (read-forms p))
   (values (append* (for/list ([f forms] #:when (eq? (car f) 'vir)) (cdr f)))
           (filter (lambda (f) (eq? (car f) 'fn)) forms)))
+
+;; read-checked : path -> number or #f
+;; The number of functions `check` covered; #f in files written before the
+;; `(checked N)` form existed.
+(define (read-checked p)
+  (for/first ([f (read-forms p)] #:when (eq? (car f) 'checked)) (cadr f)))
 
 ;; ================================================================ fn
 

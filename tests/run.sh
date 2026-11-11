@@ -53,9 +53,9 @@ if [ -s "$tmp/check.err" ]; then
     fail "check printed warnings"
 fi
 
-# 3. compare, without the header and the (vir ...) line, which names the
-#    temporary directory
-sed 1,2d "$tmp/out.results" >"$tmp/actual.results"
+# 3. compare the `fn` forms only: the header, `(vir ...)` (which names the
+#    temporary directory) and `(checked N)` are not part of the expectation
+grep '^(fn ' "$tmp/out.results" >"$tmp/actual.results"
 if [ $update = yes ]; then
     {
         echo ";; Expected results of tests/run.sh on tests/fixture/fixture.rs (README.md, 测试)."
@@ -66,7 +66,7 @@ if [ $update = yes ]; then
     exit 0
 fi
 [ -f "$expected" ] || fail "no $expected; run with --update first"
-if ! diff -u <(grep -v '^;;' "$expected") "$tmp/actual.results"; then
+if ! diff -u <(grep '^(fn ' "$expected") "$tmp/actual.results"; then
     fail "results differ from $expected (lines: - expected, + actual)"
 fi
 

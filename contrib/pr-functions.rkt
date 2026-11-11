@@ -86,6 +86,8 @@
     (printf ";; ensures-coverage results, design.md 结论22: only the functions involved in\n")
     (printf ";; the changes since ~a (pr-functions.rkt); the comment after each is why\n" base)
     (write `(vir ,@vir)) (newline)
+    ;; how many `check` covered, for the report's scope line (结论22)
+    (write `(checked ,(or (read-checked head-path) (length head)))) (newline)
     (for ([p picked])
       (write (car p))
       (printf " ; ~a\n" (string-join (cdr p) "+")))))

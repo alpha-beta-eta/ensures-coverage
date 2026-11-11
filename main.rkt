@@ -61,9 +61,11 @@
                                   (string-join (sort (hash-keys languages) string<?) ", ")))))
   (define sel (read-selector selector))
   (define-values (_ all) (read-results in))
+  ;; "functions checked" is what `check` covered, also when `in` holds only
+  ;; some of them (contrib/pr-functions.rkt)
   (report (filter (compile-selector sel) all)
           (if (string-prefix? selector "@") selector (selector->string sel))
-          (length all) out texts))
+          (or (read-checked in) (length all)) out texts))
 
 (define (cache vir out)
   (printf "~a top-level items cached to ~a\n" (cache-vir vir out) out))
